@@ -26,6 +26,7 @@ jobs:
     env:
       RAILS_ENV: test
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/popmenu_restaurantes_test
+      DISABLE_SPRING: 1
 
     steps:
       - uses: actions/checkout@v4
@@ -35,19 +36,28 @@ jobs:
           ruby-version: "3.2"
           bundler-cache: true
 
-      - name: Install OS deps (optional but safe for pg)
+      - name: Install OS deps (pg headers)
         run: sudo apt-get update && sudo apt-get install -y libpq-dev
 
       - name: Bundle
         run: bundle install --jobs 4 --retry 3
 
-      - name: DB prepare
+      - name: DB create (skip migrate if none)
         run: |
           bin/rails db:create
-          bin/rails db:migrate || true   # no migrations yet; don't fail settings branch
+          if ls db/migrate/*.rb >/dev/null 2>&1; then
+            bin/rails db:migrate
+          else
+            echo "No migrations yet; skipping db:migrate"
+          fi
 
       - name: RuboCop
         run: bundle exec rubocop
 
-      - name: RSpec
-        run: bundle exec rspec --format documentation
+      - name: RSpec (skip if no specs)
+        run: |
+          if git ls-files 'spec/**/*_spec.rb' | grep -q .; then
+            bundle exec rspec --format documentation
+          else
+            echo "No specs yet; skipping RSpec"
+          fi

@@ -10,13 +10,21 @@ module Api
         end
 
         rescue_from ActiveRecord::RecordNotFound do
-          render json: { error: "not_found" }, status: :not_found
+          render json: { error: "please provide a valid id" }, status: :unprocessable_entity
         end
 
         private
 
+        def ensure_current_restaurant!
+          render json: { error: "please provide a valid restaurant_id" }, status: :unprocessable_entity unless current_restaurant.present?
+        end
+
+        def current_restaurant
+          @current_restaurant ||= Restaurant.find_by(id: params[:restaurant_id])
+        end
 
         def resource_scope
+          return model_class.where(restaurant_id: current_restaurant.id) if current_restaurant.present?
           model_class.all
         end
 

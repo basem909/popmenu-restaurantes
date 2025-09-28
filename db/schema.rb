@@ -10,13 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_09_27_222759) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_28_174711) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
-  create_table "menu_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "menu_itemizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "menu_id", null: false
+    t.uuid "menu_item_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["menu_id", "menu_item_id"], name: "index_menu_itemizations_on_menu_and_item", unique: true
+    t.index ["menu_id"], name: "index_menu_itemizations_on_menu_id"
+    t.index ["menu_item_id"], name: "index_menu_itemizations_on_menu_item_id"
+  end
+
+  create_table "menu_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
     t.decimal "price", precision: 10, scale: 2, default: "0.0", null: false
@@ -24,8 +33,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_27_222759) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["menu_id"], name: "index_menu_items_on_menu_id"
+    t.uuid "restaurant_id", null: false
+    t.index "restaurant_id, lower((name)::text)", name: "index_menu_items_on_restaurant_and_lower_name", unique: true
     t.index ["name"], name: "index_menu_items_on_name"
+    t.index ["restaurant_id"], name: "index_menu_items_on_restaurant_id"
   end
 
   create_table "menus", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -36,8 +47,20 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_27_222759) do
     t.datetime "ends_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "restaurant_id", null: false
     t.index ["name"], name: "index_menus_on_name"
+    t.index ["restaurant_id"], name: "index_menus_on_restaurant_id"
   end
 
-  add_foreign_key "menu_items", "menus"
+  create_table "restaurants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_restaurants_on_name", unique: true
+  end
+
+  add_foreign_key "menu_itemizations", "menu_items"
+  add_foreign_key "menu_itemizations", "menus"
+  add_foreign_key "menu_items", "restaurants"
+  add_foreign_key "menus", "restaurants"
 end

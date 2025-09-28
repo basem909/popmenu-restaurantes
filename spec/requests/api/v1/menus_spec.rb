@@ -2,67 +2,99 @@
 
 require "rails_helper"
 
-RSpec.describe "Api::V1::Menus", type: :request do
-  describe "GET /api/v1/menus" do
-    it "returns menus ordered by name ASC, id as tiebreaker" do
-      create(:menu, name: "Zed")
-      create(:menu, name: "Alpha")
+RSpec.describe "API V1 — Menus (nested under Restaurants)", type: :request do
+  let(:restaurant)       { create(:restaurant) }
+  let(:other_restaurant) { create(:restaurant) }
 
-      get "/api/v1/menus"
+  def menus_path(r = restaurant) = "/api/v1/restaurants/#{r.id}/menus"
+  def menu_path(menu, r = restaurant) = "#{menus_path(r)}/#{menu.id}"
+
+  describe "GET /api/v1/restaurants/:restaurant_id/menus" do
+    it "lists only this restaurant's menus, ordered by name ASC" do
+      create(:menu, restaurant: restaurant, name: "Zed")
+      create(:menu, restaurant: restaurant, name: "Alpha")
+      create(:menu, restaurant: other_restaurant, name: "ShouldNotLeak")
+
+      get menus_path
 
       expect(response).to have_http_status(:ok)
-      expect(json.map { |h| h["name"] }).to eq(%w[Alpha Zed])
+      names = json.map { |h| h["name"] }
+      expect(names).to eq(%w[Alpha Zed])
+      expect(names).not_to include("ShouldNotLeak")
+
+      # (Optional stronger check without relying on serializer fields)
+      ids = json.map { |h| h["id"] }
+      expect(Menu.where(id: ids).pluck(:restaurant_id).uniq).to eq([ restaurant.id ])
     end
 
-    it "filters by ?active=false" do
-      create(:menu, :inactive, name: "Inactive")
-      create(:menu, name: "Active")
+    it "filters with ?active=false (within this restaurant)" do
+      create(:menu, restaurant: restaurant, name: "Inactive", active: false)
+      create(:menu, restaurant: restaurant, name: "Active",   active: true)
 
-      get "/api/v1/menus", params: { active: false }
+      get menus_path, params: { active: false }
 
       expect(response).to have_http_status(:ok)
       expect(json.pluck("name")).to eq([ "Inactive" ])
     end
 
-    it "supports ?sort=-name (desc)" do
-      create(:menu, name: "Beta")
-      create(:menu, name: "Alpha")
+    it "supports ?sort=-name (desc) when allowed" do
+      create(:menu, restaurant: restaurant, name: "Beta")
+      create(:menu, restaurant: restaurant, name: "Alpha")
 
-      get "/api/v1/menus", params: { sort: "-name" }
+      get menus_path, params: { sort: "-name" }
 
       expect(response).to have_http_status(:ok)
       expect(json.map { |h| h["name"] }).to eq(%w[Beta Alpha])
     end
 
-    it "ignores disallowed sort fields (nice-to-have)" do
-      create(:menu, name: "B")
-      create(:menu, name: "A")
+    it "ignores disallowed sort fields and falls back to the default" do
+      create(:menu, restaurant: restaurant, name: "B")
+      create(:menu, restaurant: restaurant, name: "A")
 
-      get "/api/v1/menus", params: { sort: "hack" }
+      # "starts_at" is not in allowed_sort_fields; expect default order (name ASC)
+      get menus_path, params: { sort: "starts_at" }
 
       expect(response).to have_http_status(:ok)
-
       expect(json.map { |h| h["name"] }).to eq(%w[A B])
+    end
+
+    context "when the restaurant is invalid" do
+      it "returns 422 with an error payload" do
+        bad_id = "00000000-0000-0000-0000-000000000000"
+        get "/api/v1/restaurants/#{bad_id}/menus"
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json["error"]).to be_present
+      end
     end
   end
 
-  describe "GET /api/v1/menus/:id" do
+  describe "GET /api/v1/restaurants/:restaurant_id/menus/:id" do
     it "returns a single menu with computed status" do
-      menu = create(:menu, name: "Breakfast")
+      m = create(:menu, restaurant: restaurant, name: "Breakfast", active: true)
 
-      get "/api/v1/menus/#{menu.id}"
+      get menu_path(m)
 
       expect(response).to have_http_status(:ok)
-      expect(json["id"]).to eq(menu.id)
+      expect(json["id"]).to eq(m.id)
       expect(json["name"]).to eq("Breakfast")
       expect(json["status"]).to eq("active")
     end
 
-    it "404s for missing" do
-      get "/api/v1/menus/#{SecureRandom.uuid}"
+    it "returns 422 when the menu id does not exist within this restaurant" do
+      bad = "00000000-0000-0000-0000-000000000000"
+      get "/api/v1/restaurants/#{restaurant.id}/menus/#{bad}"
 
-      expect(response).to have_http_status(:not_found)
-      expect(json["error"]).to eq("not_found")
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json["error"]).to be_present
+    end
+
+    it "returns 422 when the menu belongs to a different restaurant" do
+      foreign_menu = create(:menu, restaurant: other_restaurant, name: "Foreign")
+      get menu_path(foreign_menu, restaurant)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json["error"]).to be_present
     end
   end
 end

@@ -1,17 +1,15 @@
 module Api
   module V1
-    class MenusController < ResourceController
-      before_action :ensure_current_restaurant!, only: %i[index show]
+    class RestaurantsController < ResourceController
       private
 
       def model_class
-        Menu
+        Restaurant
       end
 
       def include_relations
-        [ :menu_items ]
+        []
       end
-
 
       def default_sort_order
         { name: :asc, id: :asc }

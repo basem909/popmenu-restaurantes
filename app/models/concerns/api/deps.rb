@@ -10,6 +10,10 @@ module Api
         "MenuItem" => {
           collection: Api::V1::MenuItemCollectionSerializer,
           resource:   Api::V1::MenuItemSerializer
+        },
+        "Restaurant" => {
+          collection: Api::V1::RestaurantCollectionSerializer,
+          resource:   Api::V1::RestaurantSerializer
         }
       }.freeze
 

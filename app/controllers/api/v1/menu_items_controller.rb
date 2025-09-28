@@ -1,7 +1,21 @@
 module Api
   module V1
     class MenuItemsController < ResourceController
+      before_action :ensure_current_restaurant!, only: %i[index show]
+      before_action :ensure_current_menu!, only: %i[index show]
+
       private
+
+      def ensure_current_menu!
+        @current_menu = @current_restaurant.menus.find_by(id: params[:menu_id])
+        render json: { error: "please provide a valid menu_id" }, status: :unprocessable_entity unless @current_menu.present?
+      end
+
+      def resource_scope
+        @current_menu
+          .menu_items
+          .where(restaurant_id: @current_restaurant.id)
+      end
 
       def model_class
         MenuItem

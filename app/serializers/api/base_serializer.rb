@@ -21,7 +21,7 @@ module Api
       def attribute_names
         (@_attributes || [])
       end
-      
+
       def computed_attributes
         (@_computed   || {})
       end

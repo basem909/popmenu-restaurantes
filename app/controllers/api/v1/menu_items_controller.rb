@@ -22,7 +22,7 @@ module Api
       end
 
       def include_relations
-        []
+        [ :menu_itemizations ]
       end
 
       def default_sort_order
@@ -35,6 +35,18 @@ module Api
 
       def additional_permitted_attributes
         []
+      end
+
+      def serialize_collection(records)
+        collection_serializer_klass
+          .new(records, context: { menu: @current_menu, restaurant: @current_restaurant })
+          .as_json
+      end
+
+      def serialize_resource(record)
+        resource_serializer_klass
+          .new(record, context: { menu: @current_menu, restaurant: @current_restaurant })
+          .as_json
       end
     end
   end

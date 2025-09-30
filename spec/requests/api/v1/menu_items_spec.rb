@@ -9,7 +9,7 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
   let(:restaurant) { create(:restaurant) }
   let(:menu)       { create(:menu, restaurant: restaurant, name: "Breakfast") }
 
-  # small helpers keep examples tidy
+  # Helpers keep examples tidy and intention-revealing
   def items_path(r: restaurant, m: menu)
     "/api/v1/restaurants/#{r.id}/menus/#{m.id}/menu_items"
   end
@@ -18,8 +18,11 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
     "#{items_path(r:, m:)}/#{item.id}"
   end
 
-  def link_item_to_menu(item, m: menu)
-    create(:menu_itemization, menu: m, menu_item: item)
+  # Attach an item to a menu, optionally with a per-menu price/currency
+  def link_item_to_menu(item, m: menu, price: nil, currency: nil)
+    create(:menu_itemization,
+           menu: m, menu_item: item,
+           price_on_menu: price, currency_on_menu: currency)
   end
 
   # ---------------------------------------------------------------------------
@@ -65,18 +68,63 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
       expect(json.map { |h| h["name"] }).to eq(%w[A B])
     end
 
+    it "returns per-menu pricing from the join, not the base item price" do
+      lunch  = menu
+      dinner = create(:menu, restaurant: restaurant, name: "Dinner")
+
+      item = create(:menu_item, restaurant: restaurant, name: "Burger", price: 99, currency: "USD")
+      link_item_to_menu(item, m: lunch,  price: 9.00,  currency: "USD")
+      link_item_to_menu(item, m: dinner, price: 15.00, currency: "USD")
+
+      get items_path(m: lunch)
+      expect(response).to have_http_status(:ok)
+      expect(json.find { |h| h["name"] == "Burger" }["display_price"]).to eq("USD 9.00")
+
+      get items_path(m: dinner)
+      expect(response).to have_http_status(:ok)
+      expect(json.find { |h| h["name"] == "Burger" }["display_price"]).to eq("USD 15.00")
+    end
+
+    it "falls back to the item's base price if the join has no price_on_menu" do
+      item = create(:menu_item, restaurant: restaurant, name: "Soup", price: 12.0, currency: "USD")
+      link_item_to_menu(item, price: nil, currency: nil) # unpriced link
+
+      get items_path
+      expect(response).to have_http_status(:ok)
+      expect(json.find { |h| h["name"] == "Soup" }["display_price"]).to eq("USD 12.00")
+    end
+
+    it "returns an empty array when the menu has no linked items" do
+      get items_path
+      expect(response).to have_http_status(:ok)
+      expect(json).to eq([])
+    end
+
+    it "does not leak items from another restaurant" do
+      other_restaurant = create(:restaurant)
+      other_menu       = create(:menu, restaurant: other_restaurant, name: "Other Menu")
+      foreign_item     = create(:menu_item, restaurant: other_restaurant, name: "Foreign")
+
+      # Link exists, but in a different tenant
+      link_item_to_menu(foreign_item, m: other_menu, price: 7.0, currency: "USD")
+
+      get items_path # current restaurant/menu
+      expect(response).to have_http_status(:ok)
+      expect(json).to be_empty
+    end
+
     context "when parents are invalid" do
       it "returns 422 if the restaurant is invalid" do
         bad_rid = "00000000-0000-0000-0000-000000000000"
         get "/api/v1/restaurants/#{bad_rid}/menus/#{menu.id}/menu_items"
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json["error"]).to be_present # base controller rescue text: "please provide a valid id"
+        expect(json["error"]).to be_present
       end
 
       it "returns 422 if the menu does not belong to the restaurant" do
         other_restaurant = create(:restaurant)
-        get items_path(r: other_restaurant, m: menu)
+        get items_path(r: other_restaurant, m: menu) # menu belongs to `restaurant`, not `other_restaurant`
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json["error"]).to eq("please provide a valid menu_id")
@@ -95,9 +143,9 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
   # Show
   # ---------------------------------------------------------------------------
   describe "GET /api/v1/restaurants/:restaurant_id/menus/:menu_id/menu_items/:id" do
-    it "returns a single item when it is on that menu" do
-      item = create(:menu_item, restaurant: restaurant, name: "Pizza", price: 18)
-      link_item_to_menu(item)
+    it "returns a single item with its per-menu price when it is on that menu" do
+      item = create(:menu_item, restaurant: restaurant, name: "Pizza", price: 18, currency: "USD")
+      link_item_to_menu(item, price: 14.50, currency: "USD")
 
       get item_path(item)
 
@@ -105,8 +153,18 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
         expect(response).to have_http_status(:ok)
         expect(json["id"]).to eq(item.id)
         expect(json["name"]).to eq("Pizza")
-        expect(json["display_price"]).to match(/USD 18\.00/)
+        expect(json["display_price"]).to eq("USD 14.50")
       end
+    end
+
+    it "falls back to base price on show when the join has no price_on_menu" do
+      item = create(:menu_item, restaurant: restaurant, name: "Cola", price: 3.25, currency: "USD")
+      link_item_to_menu(item, price: nil, currency: nil)
+
+      get item_path(item)
+
+      expect(response).to have_http_status(:ok)
+      expect(json["display_price"]).to eq("USD 3.25")
     end
 
     it "returns 422 if the item exists but is NOT on that menu" do
@@ -117,7 +175,7 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
       get item_path(item, m: menu)
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(json["error"]).to be_present # rescue text: "please provide a valid id"
+      expect(json["error"]).to be_present
     end
 
     it "returns 422 for a non-existent item id" do

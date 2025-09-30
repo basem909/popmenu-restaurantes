@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_09_28_174711) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_30_095119) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -20,7 +20,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_09_28_174711) do
     t.uuid "menu_item_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "price_on_menu", precision: 10, scale: 2
+    t.string "currency_on_menu"
     t.index ["menu_id", "menu_item_id"], name: "index_menu_itemizations_on_menu_and_item", unique: true
+    t.index ["menu_id", "menu_item_id"], name: "index_menu_itemizations_on_menu_id_and_menu_item_id", unique: true
     t.index ["menu_id"], name: "index_menu_itemizations_on_menu_id"
     t.index ["menu_item_id"], name: "index_menu_itemizations_on_menu_item_id"
   end

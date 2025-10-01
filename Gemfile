@@ -24,4 +24,7 @@ group :development, :test do
   gem "faker"
   gem "simplecov", require: false
   gem "shoulda-matchers"
+  gem "rswag-api",   "~> 2.13"
+  gem "rswag-ui",    "~> 2.13"
+  gem "rswag-specs", "~> 2.13"
 end

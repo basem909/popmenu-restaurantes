@@ -13,6 +13,7 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 
 require 'rspec/rails'
 require 'sidekiq/testing'
+require 'rswag/specs'
 
 # Ensures that the test database schema matches the current schema file.
 # If there are pending migrations it will invoke `db:test:prepare`.
@@ -45,6 +46,33 @@ RSpec.configure do |config|
 
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!
+
+  # Rswag configuration
+  config.swagger_docs = {
+    'v1/swagger.yaml' => {
+      openapi: '3.0.3',
+      info: {
+        title: 'Popmenu Restaurantes API',
+        version: 'v1',
+        description: 'API for managing restaurants, menus, and menu items'
+      },
+      servers: [
+        {
+          url: 'http://127.0.0.1:3000',
+          description: 'Local development server'
+        }
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: :http,
+            scheme: :bearer,
+            bearerFormat: 'JWT'
+          }
+        }
+      }
+    }
+  }
 end
 
 # Shoulda Matchers config (single place)

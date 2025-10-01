@@ -1,0 +1,4 @@
+# config/sidekiq.yml
+:queues:
+  - default
+  - imports

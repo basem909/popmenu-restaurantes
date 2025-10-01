@@ -1,0 +1,16 @@
+<!-- app/views/import_mailer/import_finished.text.erb -->
+Hello <%= @user.email %>,
+
+Your import has finished.
+
+Restaurants: created <%= @result.restaurants_created %>, found <%= @result.restaurants_found %>
+Menus:       created <%= @result.menus_created %>,       found <%= @result.menus_found %>
+Items:       created <%= @result.items_created %>,       found <%= @result.items_found %>
+Links:       created <%= @result.links_created %>,       updated <%= @result.links_updated %>, unchanged <%= @result.links_unchanged %>
+
+Errors:
+<% if @result.errors.present? %>
+<%= @result.errors.join("\n") %>
+<% else %>
+none
+<% end %>

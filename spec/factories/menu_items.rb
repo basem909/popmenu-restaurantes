@@ -1,5 +1,6 @@
 FactoryBot.define do
   sequence(:menu_item_name) { |n| "Item #{n}" }
+
   factory :menu_item do
     association :restaurant
     name        { generate(:menu_item_name) }

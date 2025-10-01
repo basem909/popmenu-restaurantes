@@ -7,6 +7,10 @@ gem "pg", "~> 1.5"
 gem "puma", "~> 7.0"
 gem "bootsnap", require: false
 gem "tzinfo-data", platforms: %i[windows jruby]
+gem "devise"
+gem "devise-jwt", "~> 0.11.0"
+gem "dotenv-rails"
+gem "sidekiq"
 
 group :development do
   gem "brakeman", require: false
@@ -20,4 +24,7 @@ group :development, :test do
   gem "faker"
   gem "simplecov", require: false
   gem "shoulda-matchers"
+  gem "rswag-api",   "~> 2.13"
+  gem "rswag-ui",    "~> 2.13"
+  gem "rswag-specs", "~> 2.13"
 end

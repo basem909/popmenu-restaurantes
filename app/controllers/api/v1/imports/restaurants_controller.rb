@@ -32,8 +32,18 @@ module Api
         # Parse the request payload from either raw POST body or params
         # Returns parsed JSON hash for job processing
         def parse_payload!
+          return params[:payload].to_unsafe_h if params[:payload].respond_to?(:to_unsafe_h)
+          return params[:payload] if params[:payload].is_a?(Hash)
+
           raw_payload = request.raw_post.presence || params.to_unsafe_h.to_json
-          JSON.parse(raw_payload) 
+          JSON.parse(raw_payload)
+        rescue JSON::ParserError => e
+          Rails.logger.warn(
+            message: "Imports::RestaurantsController.parse_payload! failed",
+            error: e.message,
+            payload_sample: raw_payload&.slice(0, 200)
+          )
+          raise
         end
       end
     end

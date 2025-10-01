@@ -40,6 +40,7 @@ module Imports
       return @result if restaurants.empty?
 
       process_restaurants(restaurants)
+      log_summary
       @result
     end
 
@@ -81,17 +82,22 @@ module Imports
       restaurant_name = extract_restaurant_name(restaurant_data, restaurant_index)
       return if restaurant_name.blank?
 
-      ActiveRecord::Base.transaction do
-        restaurant, created = find_or_create_restaurant!(restaurant_name)
-        increment_counter(created ? :restaurants_created : :restaurants_found)
+      ActiveSupport::Notifications.instrument(
+        "imports.restaurant_tree.process_restaurant",
+        restaurant: restaurant_name
+      ) do
+        ActiveRecord::Base.transaction do
+          restaurant, created = find_or_create_restaurant!(restaurant_name)
+          increment_counter(created ? :restaurants_created : :restaurants_found)
 
-        process_restaurant_menus(restaurant, restaurant_data, restaurant_index)
-      rescue ActiveRecord::RecordInvalid => e
-        handle_restaurant_validation_error(restaurant_name, e)
-        raise ActiveRecord::Rollback
-      rescue => e
-        handle_restaurant_unexpected_error(restaurant_name, e)
-        raise ActiveRecord::Rollback
+          process_restaurant_menus(restaurant, restaurant_data, restaurant_index)
+        rescue ActiveRecord::RecordInvalid => e
+          handle_restaurant_validation_error(restaurant_name, e)
+          raise ActiveRecord::Rollback
+        rescue => e
+          handle_restaurant_unexpected_error(restaurant_name, e)
+          raise ActiveRecord::Rollback
+        end
       end
     end
 
@@ -110,7 +116,13 @@ module Imports
       return if menus.empty?
 
       menus.each_with_index do |menu_data, menu_index|
-        import_menu!(restaurant, menu_data, restaurant_index, menu_index)
+        ActiveSupport::Notifications.instrument(
+          "imports.restaurant_tree.process_menu",
+          restaurant: restaurant.name,
+          menu: menu_data[:name]
+        ) do
+          import_menu!(restaurant, menu_data, restaurant_index, menu_index)
+        end
       end
     end
 
@@ -136,6 +148,12 @@ module Imports
     def handle_restaurant_unexpected_error(restaurant_name, error)
       error_message = "Restaurant[#{restaurant_name}] unexpected error: #{error.class}: #{error.message}"
       @result.errors << error_message
+      Rails.logger.error(
+        message: "imports.restaurant_tree.unexpected_error",
+        restaurant: restaurant_name,
+        error: error.class.name,
+        backtrace: Array(error.backtrace).first(5)
+      )
     end
   
     # ------------------------------------------------------------
@@ -189,6 +207,14 @@ module Imports
         end
         
         normalized_name = normalize_name(item_name)
+        if deduplicated.key?(normalized_name)
+          Rails.logger.info(
+            message: "imports.restaurant_tree.duplicate_item",
+            restaurant_index: restaurant_index,
+            menu_index: menu_index,
+            item_name: item_name
+          )
+        end
         deduplicated[normalized_name] = item_data.merge(name: item_name)
       end
       
@@ -198,7 +224,14 @@ module Imports
     # Process deduplicated menu items
     def process_deduplicated_items(restaurant, menu, items, restaurant_index, menu_index)
       items.each_with_index do |item_data, item_index|
-        import_item_on_menu!(restaurant, menu, item_data, restaurant_index, menu_index, item_index)
+        ActiveSupport::Notifications.instrument(
+          "imports.restaurant_tree.process_item",
+          restaurant: restaurant.name,
+          menu: menu.name,
+          item: item_data[:name]
+        ) do
+          import_item_on_menu!(restaurant, menu, item_data, restaurant_index, menu_index, item_index)
+        end
       end
     end
 
@@ -367,6 +400,14 @@ module Imports
       end
     rescue ArgumentError
       nil
+    end
+
+    def log_summary
+      Rails.logger.info(
+        message: "imports.restaurant_tree.completed",
+        stats: @result.to_h,
+        success: @result.success?
+      )
     end
 
     # Build descriptive error path for debugging

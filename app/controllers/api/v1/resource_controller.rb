@@ -1,16 +1,14 @@
 module Api
     module V1
       class ResourceController < Api::BaseController
+        rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+
         def index
           render json: serialize_collection(collection_scope)
         end
 
         def show
           render json: serialize_resource(find_resource)
-        end
-
-        rescue_from ActiveRecord::RecordNotFound do
-          render json: { error: "please provide a valid id" }, status: :unprocessable_entity
         end
 
         private
@@ -100,6 +98,10 @@ module Api
 
         def serialize_resource(record)
           resource_serializer_klass.new(record).as_json
+        end
+
+        def render_not_found
+          render json: { error: "please provide a valid id" }, status: :unprocessable_entity
         end
       end
     end

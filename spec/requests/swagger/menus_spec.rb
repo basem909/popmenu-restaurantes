@@ -18,6 +18,9 @@ RSpec.describe 'Menus API', swagger_doc: 'v1/swagger.yaml', type: :request do
                 schema: { type: :string, example: 'name,-name' },
                 description: 'Comma-separated fields; prefix with - for descending order'
 
+      let(:active) { nil }
+      let(:sort)   { nil }
+
       response '200', 'menus listed' do
         schema type: :array,
                items: {

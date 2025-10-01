@@ -3,17 +3,17 @@
 require "rails_helper"
 
 RSpec.describe PermittedAttributes do
-  it "returns menu attributes" do
-    attrs = described_class.for("menu")
-    expect(attrs).to include(:name, :description, :active, :starts_at, :ends_at)
-  end
+  describe ".for" do
+    it "returns the friendly menu whitelist" do
+      expect(described_class.for("menu")).to match_array(%i[name description active starts_at ends_at])
+    end
 
-  it "returns menu_item attributes" do
-    attrs = described_class.for("menu_item")
-    expect(attrs).to include(:name, :description, :price, :currency, :active)
-  end
+    it "returns the menu item whitelist" do
+      expect(described_class.for("menu_item")).to match_array(%i[name description price currency active])
+    end
 
-  it "returns [] for unknown resource" do
-    expect(described_class.for("unknown")).to eq([])
+    it "falls back to an empty list for unknown resources" do
+      expect(described_class.for("unknown")).to eq([])
+    end
   end
 end

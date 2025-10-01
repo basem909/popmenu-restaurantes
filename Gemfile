@@ -15,6 +15,7 @@ gem "sidekiq"
 group :development do
   gem "brakeman", require: false
   gem "rubocop-rails-omakase", require: false
+  gem "yard", require: false
 end
 
 group :development, :test do

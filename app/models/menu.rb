@@ -1,3 +1,4 @@
+# Represents a restaurant menu grouping menu items and pricing windows.
 class Menu < ApplicationRecord
   belongs_to :restaurant
 

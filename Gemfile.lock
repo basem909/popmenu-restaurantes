@@ -347,6 +347,7 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    yard (0.9.37)
     zeitwerk (2.7.3)
 
 PLATFORMS
@@ -382,6 +383,7 @@ DEPENDENCIES
   sidekiq
   simplecov
   tzinfo-data
+  yard
 
 RUBY VERSION
    ruby 3.2.4p170

@@ -11,6 +11,7 @@ module Api
 
         # Create a new restaurant import job
         # Accepts JSON payload and enqueues background job for processing
+        # @return [void]
         def create
           payload = parse_payload!
           job_id = ::Imports::RestaurantTreeWorker.perform_async(current_user.id, payload)
@@ -31,6 +32,7 @@ module Api
 
         # Parse the request payload from either raw POST body or params
         # Returns parsed JSON hash for job processing
+        # @return [Hash]
         def parse_payload!
           return params[:payload].to_unsafe_h if params[:payload].respond_to?(:to_unsafe_h)
           return params[:payload] if params[:payload].is_a?(Hash)

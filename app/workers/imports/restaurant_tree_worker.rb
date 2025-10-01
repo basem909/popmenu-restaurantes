@@ -9,6 +9,7 @@ module Imports
     # Process restaurant import job
     # @param user_id [Integer] ID of the user who initiated the import
     # @param payload_hash [Hash] Restaurant data to import
+    # @return [void]
     def perform(user_id, payload_hash)
       user = User.find(user_id)
       importer = ::Imports::RestaurantTreeImporter.new(payload_hash)

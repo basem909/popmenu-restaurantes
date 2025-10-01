@@ -2,9 +2,15 @@
 
 # app/services/imports/restaurant_tree_importer.rb
 
+# frozen_string_literal: true
+
 module Imports
   # Service for importing restaurant data with menus and menu items
   # Handles hierarchical data structure: restaurants -> menus -> menu items
+  #
+  # @example
+  #   payload = JSON.parse(File.read("restaurant_data.json"))
+  #   Imports::RestaurantTreeImporter.new(payload).call
   class RestaurantTreeImporter
     # Result structure to track import statistics and errors
     Result = Struct.new(
@@ -35,6 +41,7 @@ module Imports
     end
 
     # Main entry point for the import process
+    # @return [Result]
     def call
       restaurants = extract_restaurants_from_payload
       return @result if restaurants.empty?
@@ -47,6 +54,8 @@ module Imports
     private
 
     # Initialize result structure with default values
+    # Build the baseline result object with zeroed counters.
+    # @return [Result]
     def initialize_result
       Result.new(
         restaurants_created: 0, restaurants_found: 0,
@@ -58,6 +67,8 @@ module Imports
     end
 
     # Extract restaurants from payload and validate
+    # Extract restaurants from the payload and record an error if none are present.
+    # @return [Array<Hash>]
     def extract_restaurants_from_payload
       restaurants = Array(@payload[:restaurants])
       if restaurants.empty?
@@ -67,6 +78,8 @@ module Imports
     end
 
     # Process all restaurants in the payload
+    # @param restaurants [Array<Hash>]
+    # @return [void]
     def process_restaurants(restaurants)
       restaurants.each_with_index do |restaurant_data, restaurant_index|
         import_restaurant!(restaurant_data, restaurant_index)
@@ -78,6 +91,9 @@ module Imports
     # ------------------------------------------------------------
     
     # Import a single restaurant with its menus and menu items
+    # @param restaurant_data [Hash]
+    # @param restaurant_index [Integer]
+    # @return [void]
     def import_restaurant!(restaurant_data, restaurant_index)
       restaurant_name = extract_restaurant_name(restaurant_data, restaurant_index)
       return if restaurant_name.blank?
@@ -102,6 +118,9 @@ module Imports
     end
 
     # Extract and validate restaurant name
+    # @param restaurant_data [Hash]
+    # @param restaurant_index [Integer]
+    # @return [String, nil]
     def extract_restaurant_name(restaurant_data, restaurant_index)
       name = safe_string(restaurant_data[:name])
       if name.blank?
@@ -111,6 +130,10 @@ module Imports
     end
 
     # Process all menus for a restaurant
+    # @param restaurant [Restaurant]
+    # @param restaurant_data [Hash]
+    # @param restaurant_index [Integer]
+    # @return [void]
     def process_restaurant_menus(restaurant, restaurant_data, restaurant_index)
       menus = Array(restaurant_data[:menus])
       return if menus.empty?
@@ -127,6 +150,9 @@ module Imports
     end
 
     # Find existing restaurant or create new one
+    # Find an existing restaurant by name, or create one.
+    # @param name [String]
+    # @return [Array<Restaurant, Boolean>] the restaurant and creation flag
     def find_or_create_restaurant!(name)
       normalized_name = normalize_name(name)
       existing_restaurant = Restaurant.where("LOWER(name) = ?", normalized_name).first
@@ -139,12 +165,19 @@ module Imports
     end
 
     # Handle restaurant validation errors
+    # Record validation errors while attempting to persist a restaurant.
+    # @param restaurant_name [String]
+    # @param error [ActiveRecord::RecordInvalid]
+    # @return [void]
     def handle_restaurant_validation_error(restaurant_name, error)
       error_message = "Restaurant[#{restaurant_name}]: #{error.record.errors.full_messages.to_sentence}"
       @result.errors << error_message
     end
 
     # Handle unexpected restaurant errors
+    # @param restaurant_name [String]
+    # @param error [StandardError]
+    # @return [void]
     def handle_restaurant_unexpected_error(restaurant_name, error)
       error_message = "Restaurant[#{restaurant_name}] unexpected error: #{error.class}: #{error.message}"
       @result.errors << error_message
@@ -161,6 +194,11 @@ module Imports
     # ------------------------------------------------------------
     
     # Import a single menu with its menu items
+    # @param restaurant [Restaurant]
+    # @param menu_data [Hash]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @return [void]
     def import_menu!(restaurant, menu_data, restaurant_index, menu_index)
       menu_name = extract_menu_name(menu_data, restaurant_index, menu_index)
       return if menu_name.blank?
@@ -172,6 +210,10 @@ module Imports
     end
 
     # Extract and validate menu name
+    # @param menu_data [Hash]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @return [String, nil]
     def extract_menu_name(menu_data, restaurant_index, menu_index)
       menu_name = safe_string(menu_data[:name])
       if menu_name.blank?
@@ -181,6 +223,12 @@ module Imports
     end
 
     # Process all menu items for a menu
+    # @param restaurant [Restaurant]
+    # @param menu [Menu]
+    # @param menu_data [Hash]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @return [void]
     def process_menu_items(restaurant, menu, menu_data, restaurant_index, menu_index)
       menu_items = extract_menu_items(menu_data)
       return if menu_items.empty?
@@ -190,11 +238,17 @@ module Imports
     end
 
     # Extract menu items from menu data (supports both 'menu_items' and 'dishes' keys)
+    # @param menu_data [Hash]
+    # @return [Array<Hash>]
     def extract_menu_items(menu_data)
       Array(menu_data[:menu_items]).presence || Array(menu_data[:dishes])
     end
 
     # Deduplicate menu items by normalized name (last one wins)
+    # @param menu_items [Array<Hash>]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @return [Array<Hash>]
     def deduplicate_menu_items(menu_items, restaurant_index, menu_index)
       deduplicated = {}
       
@@ -222,6 +276,12 @@ module Imports
     end
 
     # Process deduplicated menu items
+    # @param restaurant [Restaurant]
+    # @param menu [Menu]
+    # @param items [Array<Hash>]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @return [void]
     def process_deduplicated_items(restaurant, menu, items, restaurant_index, menu_index)
       items.each_with_index do |item_data, item_index|
         ActiveSupport::Notifications.instrument(
@@ -236,6 +296,10 @@ module Imports
     end
 
     # Find existing menu or create new one
+    # Locate or persist a menu for the given restaurant.
+    # @param restaurant [Restaurant]
+    # @param name [String]
+    # @return [Array<Menu, Boolean>] the menu and creation flag
     def find_or_create_menu!(restaurant, name)
       normalized_name = normalize_name(name)
       existing_menu = restaurant.menus.where("LOWER(name) = ?", normalized_name).first
@@ -252,6 +316,14 @@ module Imports
     # ------------------------------------------------------------
     
     # Import a single menu item and create/update its menu association
+    # Persist an item and its link to the target menu.
+    # @param restaurant [Restaurant]
+    # @param menu [Menu]
+    # @param item_data [Hash]
+    # @param restaurant_index [Integer]
+    # @param menu_index [Integer]
+    # @param item_index [Integer]
+    # @return [void]
     def import_item_on_menu!(restaurant, menu, item_data, restaurant_index, menu_index, item_index)
       item_name = item_data[:name]
       price_on_menu = parse_price(item_data[:price])
@@ -272,6 +344,11 @@ module Imports
     end
 
     # Find existing menu item or create new one
+    # @param restaurant [Restaurant]
+    # @param name [String]
+    # @param price_on_menu [Float, nil]
+    # @param currency_on_menu [String, nil]
+    # @return [Array<MenuItem, Boolean>]
     def find_or_create_item!(restaurant, name, price_on_menu, currency_on_menu)
       normalized_name = normalize_name(name)
       existing_item = restaurant.menu_items.where("LOWER(name) = ?", normalized_name).first
@@ -285,6 +362,12 @@ module Imports
     end
 
     # Build attributes for creating a new menu item
+    # Build the attributes hash used when creating a new menu item.
+    # @param restaurant [Restaurant]
+    # @param name [String]
+    # @param price_on_menu [Float, nil]
+    # @param currency_on_menu [String, nil]
+    # @return [Hash]
     def build_item_attributes(restaurant, name, price_on_menu, currency_on_menu)
       attributes = { name: name, restaurant_id: restaurant.id }
       
@@ -297,6 +380,11 @@ module Imports
     end
 
     # Create or update menu item association with pricing
+    # @param menu [Menu]
+    # @param item [MenuItem]
+    # @param price_on_menu [Float, nil]
+    # @param currency_on_menu [String, nil]
+    # @return [void]
     def upsert_menu_item_link!(menu, item, price_on_menu, currency_on_menu)
       link = MenuItemization.find_or_initialize_by(menu_id: menu.id, menu_item_id: item.id)
       
@@ -311,12 +399,21 @@ module Imports
     end
 
     # Determine the appropriate currency for the menu item
+    # Decide the appropriate currency for a menu link.
+    # @param price_on_menu [Float, nil]
+    # @param currency_on_menu [String, nil]
+    # @param item [MenuItem]
+    # @return [String, nil]
     def determine_currency(price_on_menu, currency_on_menu, item)
       return nil unless price_on_menu
       currency_on_menu.presence || item.currency || "USD"
     end
 
     # Create a new menu item link
+    # @param link [MenuItemization]
+    # @param price [Float, nil]
+    # @param currency [String, nil]
+    # @return [void]
     def create_new_link!(link, price, currency)
       link.price_on_menu = price
       link.currency_on_menu = currency
@@ -325,6 +422,10 @@ module Imports
     end
 
     # Update an existing menu item link if needed
+    # @param link [MenuItemization]
+    # @param desired_price [Float, nil]
+    # @param desired_currency [String, nil]
+    # @return [void]
     def update_existing_link!(link, desired_price, desired_currency)
       price_changed = link.price_on_menu != desired_price
       currency_changed = link.currency_on_menu != desired_currency
@@ -344,11 +445,16 @@ module Imports
     # ------------------------------------------------------------
     
     # Increment a counter in the result
+    # Increment one of the result counters.
+    # @param counter_symbol [Symbol]
+    # @return [void]
     def increment_counter(counter_symbol)
       @result[counter_symbol] = @result[counter_symbol] + 1
     end
 
     # Normalize input payload to consistent format
+    # @param payload [String, Hash]
+    # @return [Hash]
     def normalize_payload(payload)
       parsed_payload = case payload
                       when String then JSON.parse(payload)
@@ -359,6 +465,9 @@ module Imports
     end
 
     # Recursively convert hash keys to symbols
+    # Recursively convert keys to snake_case symbols.
+    # @param obj [Object]
+    # @return [Object]
     def deep_symbolize_keys(obj)
       case obj
       when Hash
@@ -374,17 +483,24 @@ module Imports
     end
 
     # Normalize name for consistent comparison
+    # Downcase and squish a string for canonical comparisons.
+    # @param name_string [String]
+    # @return [String]
     def normalize_name(name_string)
       name_string.to_s.downcase.squish
     end
 
     # Safely convert value to string and clean it
+    # @param value [Object]
+    # @return [String]
     def safe_string(value)
       string_value = value.is_a?(String) ? value : (value.nil? ? "" : value.to_s)
       string_value.squish
     end
 
     # Parse price value from various formats
+    # @param value [Numeric, String, nil]
+    # @return [Float, nil]
     def parse_price(value)
       return nil if value.nil?
 
@@ -411,6 +527,13 @@ module Imports
     end
 
     # Build descriptive error path for debugging
+    # Compose a human-friendly path for an error message.
+    # @param restaurant_index [Integer]
+    # @param node_type [Symbol]
+    # @param message [String]
+    # @param menu_index [Integer, nil]
+    # @param item_index [Integer, nil]
+    # @return [String]
     def build_path_error(restaurant_index, node_type, message, menu_index: nil, item_index: nil)
       path_parts = ["restaurant[#{restaurant_index}]"]
       path_parts << "menu[#{menu_index}]" if menu_index

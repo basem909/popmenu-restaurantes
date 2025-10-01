@@ -1,0 +1,63 @@
+name: CI
+on:
+  pull_request:
+    branches: [ "dev", "main" ]
+  push:
+    branches: [ "dev", "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: popmenu_restaurantes_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/popmenu_restaurantes_test
+      DISABLE_SPRING: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2.4"
+          bundler-cache: true
+
+      - name: Install OS deps (pg headers)
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev
+
+      - name: Bundle
+        run: bundle install --jobs 4 --retry 3
+
+      - name: DB create (skip migrate if none)
+        run: |
+          bin/rails db:create
+          if ls db/migrate/*.rb >/dev/null 2>&1; then
+            bin/rails db:migrate
+          else
+            echo "No migrations yet; skipping db:migrate"
+          fi
+
+      - name: RuboCop
+        run: bundle exec rubocop
+
+      - name: RSpec (skip if no specs)
+        run: |
+          if git ls-files 'spec/**/*_spec.rb' | grep -q .; then
+            bundle exec rspec --format documentation
+          else
+            echo "No specs yet; skipping RSpec"
+          fi

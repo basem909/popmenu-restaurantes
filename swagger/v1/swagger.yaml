@@ -1,0 +1,617 @@
+---
+openapi: 3.0.3
+info:
+  title: Popmenu Restaurantes API
+  version: v1
+  description: API for managing restaurants, menus, and menu items
+servers:
+- url: http://127.0.0.1:3000
+  description: Local development server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+paths:
+  "/api/v1/imports/restaurants":
+    post:
+      summary: Queue a restaurant import job
+      tags:
+      - Imports
+      security:
+      - bearerAuth: []
+      parameters: []
+      responses:
+        '202':
+          description: import enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enqueued:
+                    type: boolean
+                  job_id:
+                    type: string
+                  message:
+                    type: string
+                required:
+                - enqueued
+                - job_id
+                - message
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+        '403':
+          description: forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+        '422':
+          description: invalid JSON payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+                required:
+                - error
+                - message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restaurants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      menus:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            menu_items:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  price:
+                                    type: number
+                                    format: float
+                                  currency:
+                                    type: string
+                                required:
+                                - name
+                          required:
+                          - name
+                    required:
+                    - name
+              required:
+              - restaurants
+        required: true
+  "/api/v1/restaurants/{restaurant_id}/menus/{menu_id}/menu_items":
+    parameters:
+    - name: restaurant_id
+      in: path
+      format: uuid
+      description: Restaurant ID
+      required: true
+      schema:
+        type: string
+    - name: menu_id
+      in: path
+      format: uuid
+      description: Menu ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List menu items for a menu
+      tags:
+      - Menu Items
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+        description: Filter by active status
+      - name: sort
+        in: query
+        schema:
+          type: string
+          example: name,-name
+        description: Comma-separated fields; prefix with - for descending order
+      responses:
+        '200':
+          description: menu items listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    active:
+                      type: boolean
+                    restaurant_id:
+                      type: string
+                      format: uuid
+                    price:
+                      type: number
+                      format: float
+                    currency:
+                      type: string
+                    display_price:
+                      type: string
+                  required:
+                  - id
+                  - name
+                  - active
+                  - restaurant_id
+                  - price
+                  - currency
+                  - display_price
+        '422':
+          description: menu not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/api/v1/restaurants/{restaurant_id}/menus/{menu_id}/menu_items/{id}":
+    parameters:
+    - name: restaurant_id
+      in: path
+      format: uuid
+      description: Restaurant ID
+      required: true
+      schema:
+        type: string
+    - name: menu_id
+      in: path
+      format: uuid
+      description: Menu ID
+      required: true
+      schema:
+        type: string
+    - name: id
+      in: path
+      format: uuid
+      description: Menu item ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a menu item
+      tags:
+      - Menu Items
+      responses:
+        '200':
+          description: menu item retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  restaurant_id:
+                    type: string
+                    format: uuid
+                  price:
+                    type: number
+                    format: float
+                  currency:
+                    type: string
+                  display_price:
+                    type: string
+                required:
+                - id
+                - name
+                - active
+                - restaurant_id
+                - price
+                - currency
+                - display_price
+        '422':
+          description: menu item not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/api/v1/restaurants/{restaurant_id}/menus":
+    parameters:
+    - name: restaurant_id
+      in: path
+      format: uuid
+      description: Restaurant ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: List menus for a restaurant
+      tags:
+      - Menus
+      parameters:
+      - name: active
+        in: query
+        schema:
+          type: boolean
+        description: Filter by active status
+      - name: sort
+        in: query
+        schema:
+          type: string
+          example: name,-name
+        description: Comma-separated fields; prefix with - for descending order
+      responses:
+        '200':
+          description: menus listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    active:
+                      type: boolean
+                    starts_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    ends_at:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    status:
+                      type: string
+                      enum:
+                      - active
+                      - inactive
+                  required:
+                  - id
+                  - name
+                  - active
+                  - status
+        '422':
+          description: restaurant not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/api/v1/restaurants/{restaurant_id}/menus/{id}":
+    parameters:
+    - name: restaurant_id
+      in: path
+      format: uuid
+      description: Restaurant ID
+      required: true
+      schema:
+        type: string
+    - name: id
+      in: path
+      format: uuid
+      description: Menu ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a menu
+      tags:
+      - Menus
+      responses:
+        '200':
+          description: menu retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  starts_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  ends_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  status:
+                    type: string
+                    enum:
+                    - active
+                    - inactive
+                required:
+                - id
+                - name
+                - active
+                - status
+        '422':
+          description: menu not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/api/v1/restaurants":
+    get:
+      summary: List restaurants
+      tags:
+      - Restaurants
+      parameters:
+      - name: sort
+        in: query
+        schema:
+          type: string
+          example: name,-name
+        description: Comma-separated fields; prefix with - for descending order
+      responses:
+        '200':
+          description: restaurants listed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                  required:
+                  - id
+                  - name
+  "/api/v1/restaurants/{id}":
+    parameters:
+    - name: id
+      in: path
+      format: uuid
+      description: Restaurant ID
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a restaurant
+      tags:
+      - Restaurants
+      responses:
+        '200':
+          description: restaurant retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                required:
+                - id
+                - name
+        '422':
+          description: invalid restaurant id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/api/v1/users":
+    post:
+      summary: Register a new user
+      tags:
+      - Users
+      parameters: []
+      responses:
+        '200':
+          description: user registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                  email:
+                    type: string
+                    format: email
+                required:
+                - user_id
+                - email
+        '422':
+          description: invalid registration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - errors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                      minLength: 8
+                    password_confirmation:
+                      type: string
+                      minLength: 8
+                  required:
+                  - email
+                  - password
+                  - password_confirmation
+              required:
+              - user
+        required: true
+  "/api/v1/users/sign_in":
+    post:
+      summary: Sign in a user
+      tags:
+      - Users
+      parameters: []
+      responses:
+        '200':
+          description: signed in
+          headers:
+            Authorization:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: integer
+                  email:
+                    type: string
+                    format: email
+                required:
+                - user_id
+                - email
+        '401':
+          description: invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                  required:
+                  - email
+                  - password
+              required:
+              - user
+        required: true
+  "/api/v1/users/sign_out":
+    delete:
+      summary: Sign out the current user
+      tags:
+      - Users
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: signed out
+        '401':
+          description: missing token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error

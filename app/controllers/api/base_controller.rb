@@ -35,7 +35,7 @@ module Api
       end
 
       def handle_json_parse_error(exception)
-        render json: { 
+        render json: {
           error: "invalid_json",
           message: "The provided data is not valid JSON. Please check your request format and try again."
         }, status: :unprocessable_entity

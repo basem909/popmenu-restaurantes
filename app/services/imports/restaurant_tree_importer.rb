@@ -30,7 +30,7 @@ module Imports
       end
 
       def total_processed
-        restaurants_created + restaurants_found + menus_created + menus_found + 
+        restaurants_created + restaurants_found + menus_created + menus_found +
         items_created + items_found + links_created + links_updated + links_unchanged
       end
     end
@@ -85,11 +85,11 @@ module Imports
         import_restaurant!(restaurant_data, restaurant_index)
       end
     end
-  
+
     # ------------------------------------------------------------
     # Restaurant Import Methods
     # ------------------------------------------------------------
-    
+
     # Import a single restaurant with its menus and menu items
     # @param restaurant_data [Hash]
     # @param restaurant_index [Integer]
@@ -156,11 +156,11 @@ module Imports
     def find_or_create_restaurant!(name)
       normalized_name = normalize_name(name)
       existing_restaurant = Restaurant.where("LOWER(name) = ?", normalized_name).first
-      
+
       if existing_restaurant
-        [existing_restaurant, false]
+        [ existing_restaurant, false ]
       else
-        [Restaurant.create!(name: name), true]
+        [ Restaurant.create!(name: name), true ]
       end
     end
 
@@ -188,11 +188,11 @@ module Imports
         backtrace: Array(error.backtrace).first(5)
       )
     end
-  
+
     # ------------------------------------------------------------
     # Menu Import Methods
     # ------------------------------------------------------------
-    
+
     # Import a single menu with its menu items
     # @param restaurant [Restaurant]
     # @param menu_data [Hash]
@@ -251,15 +251,15 @@ module Imports
     # @return [Array<Hash>]
     def deduplicate_menu_items(menu_items, restaurant_index, menu_index)
       deduplicated = {}
-      
+
       menu_items.each_with_index do |item_data, item_index|
         item_name = safe_string(item_data[:name])
         if item_name.blank?
-          @result.errors << build_path_error(restaurant_index, :item, "name is required", 
+          @result.errors << build_path_error(restaurant_index, :item, "name is required",
                                            menu_index: menu_index, item_index: item_index)
           next
         end
-        
+
         normalized_name = normalize_name(item_name)
         if deduplicated.key?(normalized_name)
           Rails.logger.info(
@@ -271,7 +271,7 @@ module Imports
         end
         deduplicated[normalized_name] = item_data.merge(name: item_name)
       end
-      
+
       deduplicated.values
     end
 
@@ -303,18 +303,18 @@ module Imports
     def find_or_create_menu!(restaurant, name)
       normalized_name = normalize_name(name)
       existing_menu = restaurant.menus.where("LOWER(name) = ?", normalized_name).first
-      
+
       if existing_menu
-        [existing_menu, false]
+        [ existing_menu, false ]
       else
-        [restaurant.menus.create!(name: name), true]
+        [ restaurant.menus.create!(name: name), true ]
       end
     end
-  
+
     # ------------------------------------------------------------
     # Menu Item Import Methods
     # ------------------------------------------------------------
-    
+
     # Import a single menu item and create/update its menu association
     # Persist an item and its link to the target menu.
     # @param restaurant [Restaurant]
@@ -334,11 +334,11 @@ module Imports
 
       upsert_menu_item_link!(menu, item, price_on_menu, currency_on_menu)
     rescue ActiveRecord::RecordInvalid => e
-      error_message = build_path_error(restaurant_index, :item, e.record.errors.full_messages.to_sentence, 
+      error_message = build_path_error(restaurant_index, :item, e.record.errors.full_messages.to_sentence,
                                      menu_index: menu_index, item_index: item_index)
       @result.errors << error_message
     rescue => e
-      error_message = build_path_error(restaurant_index, :item, "unexpected error: #{e.class}: #{e.message}", 
+      error_message = build_path_error(restaurant_index, :item, "unexpected error: #{e.class}: #{e.message}",
                                      menu_index: menu_index, item_index: item_index)
       @result.errors << error_message
     end
@@ -352,12 +352,12 @@ module Imports
     def find_or_create_item!(restaurant, name, price_on_menu, currency_on_menu)
       normalized_name = normalize_name(name)
       existing_item = restaurant.menu_items.where("LOWER(name) = ?", normalized_name).first
-      
+
       if existing_item
-        [existing_item, false]
+        [ existing_item, false ]
       else
         item_attributes = build_item_attributes(restaurant, name, price_on_menu, currency_on_menu)
-        [restaurant.menu_items.create!(item_attributes), true]
+        [ restaurant.menu_items.create!(item_attributes), true ]
       end
     end
 
@@ -370,12 +370,12 @@ module Imports
     # @return [Hash]
     def build_item_attributes(restaurant, name, price_on_menu, currency_on_menu)
       attributes = { name: name, restaurant_id: restaurant.id }
-      
+
       if price_on_menu
         attributes[:price] = price_on_menu
         attributes[:currency] = currency_on_menu.presence || "USD"
       end
-      
+
       attributes
     end
 
@@ -387,7 +387,7 @@ module Imports
     # @return [void]
     def upsert_menu_item_link!(menu, item, price_on_menu, currency_on_menu)
       link = MenuItemization.find_or_initialize_by(menu_id: menu.id, menu_item_id: item.id)
-      
+
       desired_price = price_on_menu
       desired_currency = determine_currency(price_on_menu, currency_on_menu, item)
 
@@ -439,11 +439,11 @@ module Imports
         increment_counter(:links_unchanged)
       end
     end
-  
+
     # ------------------------------------------------------------
     # Utility Methods
     # ------------------------------------------------------------
-    
+
     # Increment a counter in the result
     # Increment one of the result counters.
     # @param counter_symbol [Symbol]
@@ -457,10 +457,10 @@ module Imports
     # @return [Hash]
     def normalize_payload(payload)
       parsed_payload = case payload
-                      when String then JSON.parse(payload)
-                      when Hash   then payload
-                      else             {}
-                      end
+      when String then JSON.parse(payload)
+      when Hash   then payload
+      else             {}
+      end
       deep_symbolize_keys(parsed_payload)
     end
 
@@ -535,12 +535,11 @@ module Imports
     # @param item_index [Integer, nil]
     # @return [String]
     def build_path_error(restaurant_index, node_type, message, menu_index: nil, item_index: nil)
-      path_parts = ["restaurant[#{restaurant_index}]"]
+      path_parts = [ "restaurant[#{restaurant_index}]" ]
       path_parts << "menu[#{menu_index}]" if menu_index
       path_parts << "item[#{item_index}]" if item_index
-      
+
       "#{path_parts.join(' > ')} #{node_type}: #{message}"
     end
   end
 end
-  

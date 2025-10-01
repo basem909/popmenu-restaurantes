@@ -110,6 +110,6 @@ module Api
         def render_not_found
           render json: { error: "please provide a valid id" }, status: :unprocessable_entity
         end
-      end
     end
+  end
 end

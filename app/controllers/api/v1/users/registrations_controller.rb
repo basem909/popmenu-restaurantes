@@ -23,7 +23,7 @@ module Api
         end
 
         def handle_duplicate_email(_exception)
-          render json: { errors: ['Email has already been taken'] }, status: :unprocessable_entity
+          render json: { errors: [ "Email has already been taken" ] }, status: :unprocessable_entity
         end
       end
     end

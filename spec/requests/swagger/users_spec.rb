@@ -146,7 +146,7 @@ RSpec.describe 'User Authentication API', swagger_doc: 'v1/swagger.yaml', type: 
     delete 'Sign out the current user' do
       tags 'Users'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       response '204', 'signed out' do
         let(:user) { create(:user, password: 'Password1!') }

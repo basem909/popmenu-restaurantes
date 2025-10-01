@@ -11,7 +11,7 @@ module Api
         # @param resource [User]
         # @return [void]
         def respond_with(resource, _opts = {})
-          token = request.env['warden-jwt_auth.token'] || authorization_token_from_headers
+          token = request.env["warden-jwt_auth.token"] || authorization_token_from_headers
 
           render json: {
             user_id: resource.id,
@@ -23,20 +23,20 @@ module Api
         # Override Devise's default to deliver consistent API semantics.
         # @return [void]
         def respond_to_on_destroy
-          if request.headers['Authorization'].present?
+          if request.headers["Authorization"].present?
             head :no_content
           else
-            render json: { error: 'missing_token' }, status: :unauthorized
+            render json: { error: "missing_token" }, status: :unauthorized
           end
         end
 
         # Returns the JWT token from either the response or request headers.
         # @return [String, nil]
         def authorization_token_from_headers
-          auth_header = response.headers['Authorization'] || request.headers['Authorization']
-          return unless auth_header&.start_with?('Bearer ')
+          auth_header = response.headers["Authorization"] || request.headers["Authorization"]
+          return unless auth_header&.start_with?("Bearer ")
 
-          auth_header.split(' ', 2).last
+          auth_header.split(" ", 2).last
         end
       end
     end

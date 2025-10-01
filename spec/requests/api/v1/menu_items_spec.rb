@@ -73,7 +73,7 @@ RSpec.describe "API V1 — Menu Items (nested under Menus)", type: :request do
       end
 
       it "respects the active filter" do
-        expect(json.pluck("name")).to eq(["Sleeping"])
+        expect(json.pluck("name")).to eq([ "Sleeping" ])
       end
     end
 

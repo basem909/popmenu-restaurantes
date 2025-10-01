@@ -1,7 +1,7 @@
 # app/mailers/import_mailer.rb
 class ImportMailer < ApplicationMailer
     default from: "no-reply@example.com"
-  
+
     def import_finished
       @user   = params[:user]
       @result = params[:result]
@@ -10,5 +10,4 @@ class ImportMailer < ApplicationMailer
         format.html
       end
     end
-  end
-  
+end

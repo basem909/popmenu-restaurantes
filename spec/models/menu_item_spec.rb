@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe MenuItem, type: :model do
@@ -19,7 +20,7 @@ RSpec.describe MenuItem, type: :model do
       create(:menu_itemization, menu: m1, menu_item: mi)
       create(:menu_itemization, menu: m2, menu_item: mi)
 
-      expect(mi.menus.map(&:id)).to match_array([m1.id, m2.id])
+      expect(mi.menus.map(&:id)).to match_array([ m1.id, m2.id ])
     end
 
     it "destroys dependent menu_itemizations but not menus" do
@@ -80,7 +81,7 @@ RSpec.describe MenuItem, type: :model do
     it "returns only active items" do
       create(:menu_item, active: true)
       create(:menu_item, active: false)
-      expect(described_class.active.pluck(:active).uniq).to eq([true])
+      expect(described_class.active.pluck(:active).uniq).to eq([ true ])
     end
 
     it "defaults to active: true on create" do

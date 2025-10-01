@@ -15,14 +15,14 @@ module Api
         def create
           payload = parse_payload!
           job_id = ::Imports::RestaurantTreeWorker.perform_async(current_user.id, payload)
-          
-          render json: { 
-            enqueued: true, 
+
+          render json: {
+            enqueued: true,
             job_id: job_id,
             message: "Restaurant import job has been queued for processing"
           }, status: :accepted
         rescue JSON::ParserError
-          render json: { 
+          render json: {
             error: "invalid_json",
             message: "The provided data is not valid JSON. Please check your request format and try again."
           }, status: :unprocessable_entity
@@ -51,4 +51,3 @@ module Api
     end
   end
 end
-  

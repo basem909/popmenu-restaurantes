@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe User, type: :model do
   describe "#can_page?" do
-    subject(:user) { build(:user, page_auth: ["reports", "import"]) }
+    subject(:user) { build(:user, page_auth: [ "reports", "import" ]) }
 
     it "returns true when the user may view the page" do
       expect(user.can_page?("import")).to be(true)

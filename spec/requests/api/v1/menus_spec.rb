@@ -48,7 +48,7 @@ RSpec.describe "API V1 — Menus (nested under Restaurants)", type: :request do
       end
 
       it "filters by active flag" do
-        expect(json.pluck("name")).to eq(["After Hours"])
+        expect(json.pluck("name")).to eq([ "After Hours" ])
       end
     end
 

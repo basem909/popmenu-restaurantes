@@ -6,7 +6,7 @@ RSpec.describe 'Restaurant Imports API', swagger_doc: 'v1/swagger.yaml', type: :
       tags 'Imports'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :payload,
                 in: :body,

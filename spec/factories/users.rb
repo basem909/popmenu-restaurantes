@@ -5,8 +5,7 @@ FactoryBot.define do
     page_auth { [] }
 
     trait :can_import do
-      page_auth { ["import"] }
+      page_auth { [ "import" ] }
     end
-
   end
 end

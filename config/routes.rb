@@ -1,10 +1,10 @@
 # config/routes.rb
 Rails.application.routes.draw do
   if Rails.env.development? || Rails.env.test?
-    mount Rswag::Ui::Engine  => '/api-docs'
-    mount Rswag::Api::Engine => '/api-docs'
-    require 'sidekiq/web'
-    mount Sidekiq::Web => '/sidekiq'
+    mount Rswag::Ui::Engine  => "/api-docs"
+    mount Rswag::Api::Engine => "/api-docs"
+    require "sidekiq/web"
+    mount Sidekiq::Web => "/sidekiq"
   end
   # Devise routes for user authentication
   devise_for :users,

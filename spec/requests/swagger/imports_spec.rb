@@ -6,7 +6,7 @@ RSpec.describe 'Restaurant Imports API', swagger_doc: 'v1/swagger.yaml', type: :
       tags 'Imports'
       consumes 'application/json'
       produces 'application/json'
-      security [{ bearerAuth: [] }]
+      security [ { bearerAuth: [] } ]
 
       parameter name: :payload,
                 in: :body,
@@ -80,14 +80,15 @@ RSpec.describe 'Restaurant Imports API', swagger_doc: 'v1/swagger.yaml', type: :
         run_test!
       end
 
-      response '401', 'unauthorized' do
-        schema type: :object,
-               properties: {
-                 error: { type: :string }
-               },
-               required: %w[error]
+     response '401', 'unauthorized' do
+       schema type: :object,
+              properties: {
+                error: { type: :string }
+              },
+              required: %w[error]
 
         let(:payload) { { restaurants: [] } }
+        let(:Authorization) { nil }
 
         run_test!
       end
@@ -118,11 +119,12 @@ RSpec.describe 'Restaurant Imports API', swagger_doc: 'v1/swagger.yaml', type: :
         let(:payload) { { restaurants: [] } }
 
         before do
-          @auth_headers = auth_headers_for(user)
-          allow(JSON).to receive(:parse).and_raise(JSON::ParserError)
+          allow_any_instance_of(Api::V1::Imports::RestaurantsController)
+            .to receive(:parse_payload!)
+            .and_raise(JSON::ParserError)
         end
 
-        let(:Authorization) { @auth_headers['Authorization'] }
+        let(:Authorization) { auth_headers_for(user)['Authorization'] }
 
         run_test!
       end

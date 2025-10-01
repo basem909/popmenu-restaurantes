@@ -350,12 +350,12 @@ users_data = [
   {
     email: 'importer@popmenu.test',
     password: 'Password1!',
-    page_auth: ['import']
+    page_auth: [ 'import' ]
   },
   {
     email: 'manager@popmenu.test',
     password: 'Password1!',
-    page_auth: ['reports', 'import']
+    page_auth: [ 'reports', 'import' ]
   }
 ]
 

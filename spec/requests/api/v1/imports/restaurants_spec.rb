@@ -1,50 +1,72 @@
-# spec/requests/api/v1/imports/restaurants_spec.rb
 require "rails_helper"
 
-RSpec.describe "API V1 — Imports::Restaurants (JWT + permission + worker)", type: :request do
+RSpec.describe "API V1 — Imports::Restaurants", type: :request do
+  subject(:perform_request) do
+    post "/api/v1/imports/restaurants",
+         params: body,
+         headers: default_headers.merge(extra_headers)
+  end
+
+  let(:body)           { payload.to_json }
   let(:payload) do
     {
       restaurants: [
-        { name: "R1", menus: [ { name: "M1", menu_items: [ { name: "X", price: 1.0 } ] } ] }
+        {
+          name: "R1",
+          menus: [
+            { name: "M1", menu_items: [ { name: "X", price: 1.0 } ] }
+          ]
+        }
       ]
     }
   end
+  let(:default_headers) { { "CONTENT_TYPE" => "application/json" } }
+  let(:extra_headers)   { {} }
 
-  it "rejects unauthenticated" do
-    post "/api/v1/imports/restaurants", params: payload.to_json, headers: { "CONTENT_TYPE" => "application/json" }
-    expect(response).to have_http_status(:unauthorized)
+  context "when no credentials are provided" do
+    it "returns 401 unauthorized" do
+      perform_request
+      expect(response).to have_http_status(:unauthorized)
+    end
   end
 
-  it "forbids without page_auth import" do
-    user = create(:user)
-    headers = auth_headers_for(user)
+  context "when the user is signed in but not allowed to import" do
+    let(:user)          { create(:user) }
+    let(:extra_headers) { auth_headers_for(user) }
 
-    post "/api/v1/imports/restaurants", params: payload.to_json, headers: headers.merge("CONTENT_TYPE" => "application/json")
-    expect(response).to have_http_status(:forbidden)
+    it "returns 403 forbidden" do
+      perform_request
+      expect(response).to have_http_status(:forbidden)
+      expect(json["error"]).to eq("forbidden")
+    end
   end
 
-  it "enqueues Sidekiq worker and returns 202 when authorized" do
-    user = create(:user, :can_import)
-    headers = auth_headers_for(user)
+  context "when the user can import" do
+    let(:user)          { create(:user, :can_import) }
+    let(:extra_headers) { auth_headers_for(user) }
 
-    expect {
-      post "/api/v1/imports/restaurants", params: payload.to_json, headers: headers.merge("CONTENT_TYPE" => "application/json")
-    }.to change(Imports::RestaurantTreeWorker.jobs, :size).by(1)
+    it "queues the background worker and returns 202" do
+      expect { perform_request }.to change(Imports::RestaurantTreeWorker.jobs, :size).by(1)
+      expect(response).to have_http_status(:accepted)
+      expect(json).to include("enqueued" => true, "job_id" => a_string_matching(/[a-f0-9]{24}/))
+    end
 
-    expect(response).to have_http_status(:accepted)
-    expect(json["enqueued"]).to eq(true)
-    expect(json["job_id"]).to be_present
+    it "includes the payload in the queued job" do
+      perform_request
+      job_payload = Imports::RestaurantTreeWorker.jobs.last["args"].last
+      expect(job_payload).to eq(JSON.parse(body))
+    end
   end
 
-  it "returns 422 for invalid JSON" do
-    user = create(:user, :can_import)
-    headers = auth_headers_for(user)
+  context "when the payload cannot be parsed as JSON" do
+    let(:user)          { create(:user, :can_import) }
+    let(:extra_headers) { auth_headers_for(user) }
+    let(:body)          { "not-json" }
 
-    post "/api/v1/imports/restaurants", 
-         params: "not-json", 
-         headers: headers.merge("CONTENT_TYPE" => "application/json")
-    
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(json["error"]).to eq("invalid_json")
+    it "returns a validation error" do
+      perform_request
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json).to include("error" => "invalid_json")
+    end
   end
 end

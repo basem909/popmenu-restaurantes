@@ -10,6 +10,8 @@ RSpec.describe 'Restaurants API', swagger_doc: 'v1/swagger.yaml', type: :request
                 schema: { type: :string, example: 'name,-name' },
                 description: 'Comma-separated fields; prefix with - for descending order'
 
+      let(:sort) { nil }
+
       response '200', 'restaurants listed' do
         schema type: :array,
                items: {

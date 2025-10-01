@@ -1,3 +1,4 @@
+# Join model that links a menu item to a menu with optional per-menu pricing.
 class MenuItemization < ApplicationRecord
   belongs_to :menu
   belongs_to :menu_item
@@ -13,6 +14,8 @@ class MenuItemization < ApplicationRecord
 
   private
 
+  # Ensure the menu and menu item live under the same restaurant.
+  # @return [void]
   def same_restaurant
     return if menu.blank? || menu_item.blank?
     if menu.restaurant_id != menu_item.restaurant_id
@@ -20,6 +23,8 @@ class MenuItemization < ApplicationRecord
     end
   end
 
+  # Normalise currency values for consistent comparisons.
+  # @return [void]
   def normalize_currency_on_menu
     return if currency_on_menu.nil?
     self.currency_on_menu = currency_on_menu.to_s.strip.upcase.presence

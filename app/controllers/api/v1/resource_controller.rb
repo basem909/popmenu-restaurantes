@@ -1,16 +1,19 @@
 module Api
-    module V1
-      class ResourceController < Api::BaseController
+  module V1
+    class ResourceController < Api::BaseController
+        # Respond with consistent not-found JSON when the underlying model is missing.
+        rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+
+        # GET index handler for standard read-only resources.
+        # @return [void]
         def index
           render json: serialize_collection(collection_scope)
         end
 
+        # GET show handler for standard read-only resources.
+        # @return [void]
         def show
           render json: serialize_resource(find_resource)
-        end
-
-        rescue_from ActiveRecord::RecordNotFound do
-          render json: { error: "please provide a valid id" }, status: :unprocessable_entity
         end
 
         private
@@ -101,6 +104,12 @@ module Api
         def serialize_resource(record)
           resource_serializer_klass.new(record).as_json
         end
-      end
+
+        # Render the standardised not-found payload.
+        # @return [void]
+        def render_not_found
+          render json: { error: "please provide a valid id" }, status: :unprocessable_entity
+        end
     end
+  end
 end

@@ -57,12 +57,13 @@ RSpec.describe 'User Authentication API', swagger_doc: 'v1/swagger.yaml', type: 
                },
                required: %w[errors]
 
+        let!(:existing_user) { create(:user, email: 'taken@example.com') }
         let(:user) do
           {
             user: {
-              email: 'bad-email',
-              password: 'short',
-              password_confirmation: 'mismatch'
+              email: existing_user.email,
+              password: 'Password1!',
+              password_confirmation: 'Password1!'
             }
           }
         end
@@ -166,7 +167,11 @@ RSpec.describe 'User Authentication API', swagger_doc: 'v1/swagger.yaml', type: 
                },
                required: %w[error]
 
-        run_test!
+        let(:Authorization) { nil }
+
+        run_test! do |response|
+          expect(JSON.parse(response.body)).to include('error' => 'missing_token')
+        end
       end
     end
   end

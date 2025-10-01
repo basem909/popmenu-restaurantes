@@ -8,6 +8,7 @@ module Api
 
         def respond_with(resource, _opts = {})
           token = request.env['warden-jwt_auth.token'] || authorization_token_from_headers
+
           render json: {
             user_id: resource.id,
             email: resource.email,
@@ -16,12 +17,17 @@ module Api
         end
 
         def respond_to_on_destroy
-          head :no_content
+          if request.headers['Authorization'].present?
+            head :no_content
+          else
+            render json: { error: 'missing_token' }, status: :unauthorized
+          end
         end
 
         def authorization_token_from_headers
           auth_header = response.headers['Authorization'] || request.headers['Authorization']
           return unless auth_header&.start_with?('Bearer ')
+
           auth_header.split(' ', 2).last
         end
       end

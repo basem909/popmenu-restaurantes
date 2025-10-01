@@ -37,21 +37,13 @@ RSpec.describe MenuItem, type: :model do
   # Validations
   # ---------------------------------------------------------------------------
   describe "validations" do
-    subject { build(:menu_item) } # for Shoulda uniqueness
+    subject { build(:menu_item, restaurant: restaurant_for_validation) }
+
+    let(:restaurant_for_validation) { create(:restaurant) }
 
     it { is_expected.to validate_presence_of(:name) }
-
-    it "requires non-negative price (zero is OK)" do
-      r = create(:restaurant)
-
-      negative = described_class.new(restaurant: r, name: "X", price: -1)
-      expect(negative).not_to be_valid
-      expect(negative.errors[:price]).to be_present
-
-      zero_ok = described_class.new(restaurant: r, name: "Y", price: 0)
-      zero_ok.validate
-      expect(zero_ok.errors[:price]).to be_empty
-    end
+    it { is_expected.to validate_numericality_of(:price).is_greater_than_or_equal_to(0) }
+    it { is_expected.to validate_uniqueness_of(:name).scoped_to(:restaurant_id).case_insensitive }
 
     it "defaults currency to USD at the DB level when omitted (Postgres only)",
        if: ActiveRecord::Base.connection.adapter_name =~ /postgres/i do
@@ -74,19 +66,10 @@ RSpec.describe MenuItem, type: :model do
       mi = MenuItem.find(result["id"])
       expect(mi.currency).to eq("USD")
     end
-
-    it "enforces case-insensitive uniqueness per restaurant" do
-      r = create(:restaurant)
-      create(:menu_item, restaurant: r, name: "burger")
-      dup = build(:menu_item, restaurant: r, name: "BURGER")
-      expect(dup).not_to be_valid
-      expect(dup.errors[:name]).to be_present
-    end
-
-    it "allows the same name across different restaurants" do
+    it "allows the same friendly name across different restaurants" do
       create(:menu_item, restaurant: create(:restaurant), name: "burger")
-      ok = build(:menu_item, restaurant: create(:restaurant), name: "BURGER")
-      expect(ok).to be_valid
+      twin = build(:menu_item, restaurant: create(:restaurant), name: "BURGER")
+      expect(twin).to be_valid
     end
   end
 
@@ -108,7 +91,7 @@ RSpec.describe MenuItem, type: :model do
   # ---------------------------------------------------------------------------
   # Database constraints (safety & race protection)
   # ---------------------------------------------------------------------------
-  describe "database constraints (optional but strong)" do
+  describe "database constraints" do
     it "has the unique index on [restaurant_id, lower(name)]" do
       indexes = ActiveRecord::Base.connection.indexes(:menu_items)
       names   = indexes.map(&:name)

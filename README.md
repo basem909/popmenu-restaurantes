@@ -14,6 +14,7 @@ An API-first Rails application for browsing restaurants, their menus, and menu i
 - [Running Tests](#running-tests)
 - [Documentation](#documentation)
 - [Project Highlights](#project-highlights)
+- [Future Aspects of Enhancements](#future-aspects-of-enhancements)
 - [Authors](#authors)
 - [Contributing](#contributing)
 - [Show Your Support](#show-your-support)
@@ -175,6 +176,16 @@ bundle exec yard doc
 - **Importer instrumentation** – notifications, structured logging, and summary emails make bulk imports observable.
 - **Comprehensive test suite** – model, service, and request specs cover critical behaviours; Swagger specs keep contracts honest.
 - **Production-ready defaults** – UUID primary keys, JWT auth, Sidekiq for background work, seeds for easy demos.
+
+---
+
+## Future Aspects of Enhancements
+
+- Extend the importer to support delta updates (marking menu items inactive when dropped from partner feeds).
+- Introduce caching + ETag support on read endpoints to reduce payload transfer for large menu catalogs.
+- Add rate limiting / throttling for the import endpoint to guard against runaway partner integrations.
+- Integrate webhooks so partners get notified after successful imports.
+- Improve auditability with per-item change logs and diffable history for menu items.
 
 ---
 

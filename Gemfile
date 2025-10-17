@@ -4,7 +4,7 @@ ruby "3.2.4"
 
 gem "rails", "~> 7.2.2", ">= 7.2.2.2"
 gem "pg", "~> 1.5"
-gem "puma", "~> 7.0"
+gem "puma", "~> 7.1"
 gem "bootsnap", require: false
 gem "tzinfo-data", platforms: %i[windows jruby]
 gem "devise"

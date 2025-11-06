@@ -27,5 +27,5 @@ group :development, :test do
   gem "shoulda-matchers"
   gem "rswag-api",   "~> 2.13"
   gem "rswag-ui",    "~> 2.13"
-  gem "rswag-specs", "~> 2.13"
+  gem "rswag-specs", "~> 2.17"
 end
